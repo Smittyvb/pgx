@@ -19,7 +19,9 @@ use object::Object;
 use owo_colors::OwoColorize;
 use pgx_utils::{
     pg_config::{PgConfig, Pgx},
-    sql_entity_graph::{PgxSql, RustSourceOnlySqlMapping, RustSqlMapping, SqlGraphEntity},
+    sql_entity_graph::{
+        ControlFile, PgxSql, RustSourceOnlySqlMapping, RustSqlMapping, SqlGraphEntity,
+    },
     PgxPgSysStub,
 };
 use std::{
@@ -384,10 +386,14 @@ pub(crate) fn generate_schema(
             .expect(&format!("Couldn't call __pgx_source_only_sql_mappings"));
         source_only_sql_mapping = source_only_sql_mapping_symbol();
 
-        let symbol: libloading::os::unix::Symbol<unsafe extern "C" fn() -> SqlGraphEntity> = lib
+        let symbol: libloading::os::unix::Symbol<
+            unsafe extern "C" fn() -> eyre::Result<ControlFile>,
+        > = lib
             .get("__pgx_marker".as_bytes())
             .expect(&format!("Couldn't call __pgx_marker"));
-        let control_file_entity = symbol();
+        let control_file_entity = SqlGraphEntity::ExtensionRoot(
+            symbol().expect("Failed to get control file information"),
+        );
         entities.push(control_file_entity);
 
         for symbol_to_call in fns_to_call {
