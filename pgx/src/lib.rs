@@ -344,7 +344,7 @@ macro_rules! pg_sql_graph_magic {
     () => {
         #[no_mangle]
         #[doc(hidden)]
-        pub extern "C" fn __pgx_typeid_sql_mappings(
+        pub extern "Rust" fn __pgx_typeid_sql_mappings(
         ) -> &'static ::pgx::utils::__reexports::std::collections::HashSet<
             ::pgx::utils::sql_entity_graph::RustSqlMapping,
         > {
@@ -353,7 +353,7 @@ macro_rules! pg_sql_graph_magic {
 
         #[no_mangle]
         #[doc(hidden)]
-        pub extern "C" fn __pgx_source_only_sql_mappings(
+        pub extern "Rust" fn __pgx_source_only_sql_mappings(
         ) -> &'static ::pgx::utils::__reexports::std::collections::HashSet<
             ::pgx::utils::sql_entity_graph::RustSourceOnlySqlMapping,
         > {
@@ -363,7 +363,8 @@ macro_rules! pg_sql_graph_magic {
         // A marker which must exist in the root of the extension.
         #[no_mangle]
         #[doc(hidden)]
-        pub extern "C" fn __pgx_marker(
+        #[rustfmt::skip] // explict extern "Rust" is more clear here
+        pub extern "Rust" fn __pgx_marker(
         ) -> ::pgx::utils::__reexports::eyre::Result<::pgx::utils::sql_entity_graph::ControlFile> {
             use ::core::convert::TryFrom;
             use ::pgx::utils::__reexports::eyre::WrapErr;

@@ -19,7 +19,7 @@ use object::Object;
 use owo_colors::OwoColorize;
 use pgx_utils::{
     pg_config::{PgConfig, Pgx},
-    sql_entity_graph::{PgxSql, RustSourceOnlySqlMapping, RustSqlMapping, SqlGraphEntity},
+    sql_entity_graph::{ControlFile, PgxSql, RustSourceOnlySqlMapping, RustSqlMapping, SqlGraphEntity},
     PgxPgSysStub,
 };
 use std::{
@@ -357,7 +357,13 @@ pub(crate) fn generate_schema(
     let typeid_sql_mapping;
     let source_only_sql_mapping;
 
+    #[rustfmt::skip] // explict extern "Rust" is more clear here
     unsafe {
+        // SAFETY: Calls foreign functions with the correct type signatures.
+        // Assumes that repr(Rust) enums are represented the same in this crate as in the external
+        // binary, which is the case in practice when the same compiler is used to compile the
+        // external crate.
+
         let _postmaster = libloading::os::unix::Library::open(
             Some(&postmaster_stub_built),
             libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL,
@@ -372,26 +378,30 @@ pub(crate) fn generate_schema(
                 .expect(&format!("Couldn't libload {}", lib_so.display()));
 
         let typeid_sql_mappings_symbol: libloading::os::unix::Symbol<
-            unsafe extern "C" fn() -> &'static std::collections::HashSet<RustSqlMapping>,
+            unsafe extern "Rust" fn() -> &'static std::collections::HashSet<RustSqlMapping>,
         > = lib
             .get("__pgx_typeid_sql_mappings".as_bytes())
             .expect(&format!("Couldn't call __pgx_typeid_sql_mappings"));
         typeid_sql_mapping = typeid_sql_mappings_symbol();
         let source_only_sql_mapping_symbol: libloading::os::unix::Symbol<
-            unsafe extern "C" fn() -> &'static std::collections::HashSet<RustSourceOnlySqlMapping>,
+            unsafe extern "Rust" fn() -> &'static std::collections::HashSet<RustSourceOnlySqlMapping>,
         > = lib
             .get("__pgx_source_only_sql_mappings".as_bytes())
             .expect(&format!("Couldn't call __pgx_source_only_sql_mappings"));
         source_only_sql_mapping = source_only_sql_mapping_symbol();
 
-        let symbol: libloading::os::unix::Symbol<unsafe extern "C" fn() -> SqlGraphEntity> = lib
+        let symbol: libloading::os::unix::Symbol<
+            unsafe extern "Rust" fn() -> eyre::Result<ControlFile>,
+        > = lib
             .get("__pgx_marker".as_bytes())
             .expect(&format!("Couldn't call __pgx_marker"));
-        let control_file_entity = symbol();
+        let control_file_entity = SqlGraphEntity::ExtensionRoot(
+            symbol().expect("Failed to get control file information"),
+        );
         entities.push(control_file_entity);
 
         for symbol_to_call in fns_to_call {
-            let symbol: libloading::os::unix::Symbol<unsafe extern "C" fn() -> SqlGraphEntity> =
+            let symbol: libloading::os::unix::Symbol<unsafe extern "Rust" fn() -> SqlGraphEntity> =
                 lib.get(symbol_to_call.as_bytes())
                     .expect(&format!("Couldn't call {:#?}", symbol_to_call));
             let entity = symbol();
