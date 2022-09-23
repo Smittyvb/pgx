@@ -28,7 +28,7 @@ use std::{
 };
 
 /// The output of a [`PostgresType`](crate::sql_entity_graph::postgres_type::PostgresType) from `quote::ToTokens::to_tokens`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct PostgresTypeEntity {
     pub name: &'static str,
     pub file: &'static str,
@@ -41,6 +41,12 @@ pub struct PostgresTypeEntity {
     pub out_fn: &'static str,
     pub out_fn_module_path: String,
     pub to_sql_config: ToSqlConfigEntity,
+}
+
+impl PartialEq for PostgresTypeEntity {
+    fn eq(&self, other: &Self) -> bool {
+        self.full_path == other.full_path
+    }
 }
 
 impl Hash for PostgresTypeEntity {

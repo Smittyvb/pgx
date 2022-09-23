@@ -27,7 +27,7 @@ use std::{
 };
 
 /// The output of a [`PostgresEnum`](crate::sql_entity_graph::postgres_enum::PostgresEnum) from `quote::ToTokens::to_tokens`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct PostgresEnumEntity {
     pub name: &'static str,
     pub file: &'static str,
@@ -37,6 +37,12 @@ pub struct PostgresEnumEntity {
     pub mappings: std::collections::HashSet<RustSqlMapping>,
     pub variants: Vec<&'static str>,
     pub to_sql_config: ToSqlConfigEntity,
+}
+
+impl PartialEq for PostgresEnumEntity { 
+    fn eq(&self, other: &Self) -> bool {
+        self.full_path == other.full_path
+    }
 }
 
 impl Hash for PostgresEnumEntity {
