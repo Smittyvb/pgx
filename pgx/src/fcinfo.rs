@@ -129,12 +129,24 @@ mod pg_10_11 {
 #[cfg(any(feature = "pg12", feature = "pg13", feature = "pg14"))]
 mod pg_12_13_14 {
     use crate::{pg_sys, FromDatum};
+    use std::any::TypeId;
 
     #[inline]
-    pub fn pg_getarg<T: FromDatum>(fcinfo: pg_sys::FunctionCallInfo, num: usize) -> Option<T> {
+    pub fn pg_getarg<T: FromDatum + 'static>(
+        fcinfo: pg_sys::FunctionCallInfo,
+        num: usize,
+    ) -> Option<T> {
         let datum = get_nullable_datum(fcinfo, num);
         unsafe {
-            let typid = super::pg_getarg_type(fcinfo, num);
+            // The Rust type ID of the type of the argument
+            let t_type_id = TypeId::of::<T>();
+            let typid = if t_type_id == TypeId::of::<crate::AnyElement>()
+                || t_type_id == TypeId::of::<crate::AnyArray>()
+            {
+                super::pg_getarg_type(fcinfo, num)
+            } else {
+                pg_sys::InvalidOid
+            };
             T::from_datum(datum.value, datum.isnull, typid)
         }
     }
