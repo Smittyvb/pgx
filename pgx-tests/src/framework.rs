@@ -432,7 +432,11 @@ fn initdb(postgresql_conf: Vec<&'static str>) -> eyre::Result<()> {
     modify_postgresql_conf(pgdata, postgresql_conf)
 }
 
-fn modify_postgresql_conf(pgdata: PathBuf, postgresql_conf: Vec<&'static str>) -> eyre::Result<()> {
+fn modify_postgresql_conf(
+    pgdata: PathBuf,
+    mut postgresql_conf: Vec<&'static str>,
+) -> eyre::Result<()> {
+    postgresql_conf.insert(0, "timezone = 'UTC'");
     let mut postgresql_conf_file = std::fs::OpenOptions::new()
         .write(true)
         .truncate(true)
