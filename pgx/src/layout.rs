@@ -11,6 +11,7 @@ Some may be better off extending the pgx bindings themselves, doing their own la
 When PGX is a bit more mature in its soundness, and we better understand what our callers expect,
 then we may want to offer more help.
 */
+#[allow(unused_imports)] // TYPALIGN_DOUBLE is unused on 32-bit
 use crate::pg_sys::{self, TYPALIGN_CHAR, TYPALIGN_DOUBLE, TYPALIGN_INT, TYPALIGN_SHORT};
 use core::mem;
 
@@ -71,7 +72,8 @@ pub(crate) enum Align {
     Byte = mem::align_of::<u8>(),
     Short = mem::align_of::<libc::c_short>(),
     Int = mem::align_of::<libc::c_int>(),
-    Double = mem::align_of::<f64>(),
+    // 32-bit processors have a maximum alignment of 32 bits
+    Double = mem::align_of::<libc::c_int>() * 2,
 }
 
 impl TryFrom<libc::c_char> for Align {
